@@ -2,6 +2,7 @@
 
 import numpy as np
 import hexpex
+import timeit
 
 class HexDriver:
     """ Hex game mechanics """
@@ -11,6 +12,7 @@ class HexDriver:
         self.moves = 0
         self.blue = 1
         self.red = -1
+        self.smap = { self.blue: 'x', self.red:  'o', 0: '.' }
         self.position = np.zeros((size, size), dtype=int)
         self.rng = np.random.default_rng()
 
@@ -26,9 +28,7 @@ class HexDriver:
         hsize = self.position.shape[0] // 2
         q = cols[move] - hsize
         r = rows[move] - hsize
-        # print(self.red_moves(), end=' ')
         self.make_move(q, r)
-        # print(f'{q:+d} {r:+d} {rows.size:2d} {self.moves:2d} {self.game_over}')
         return q, r
 
     def make_move(self, q:int, r:int) -> bool:
@@ -71,7 +71,6 @@ class HexDriver:
     
     def blue_wins(self) -> bool:
         """ True if a winning position for blue """
-        # print('blue_wins', end=' ')
         hsize = self.position.shape[0] // 2
         sources = [hexpex.Axial(-hsize, r) for r in range(-hsize, hsize + 1) if self.cell_color(-hsize, r) == self.blue]
         targets = [hexpex.Axial( hsize, r) for r in range(-hsize, hsize + 1) if self.cell_color( hsize, r) == self.blue]
@@ -106,14 +105,20 @@ class HexDriver:
         return False
 
     def __str__(self) -> str:
-        smap = {-1: 'o', 0: '.', 1: 'x'}
+        lines = []
+        size = self.position.shape[0]
+        for row in range(size):
+            lines.append(' ' * row + '  '.join(list(map(lambda i: self.smap[i], self.position[row]))))
+        return '\n'.join(lines)
+
+    def large_print(self) -> str:
         size = self.position.shape[0]
         total_lines = 1 + size * 4 + 2 * (size - 1)
         lines = ['       ' for _ in range(total_lines)]
 
         lines[0] = '  _____'
         for row in range(size):
-            color = smap[self.position[row, 0]]
+            color = self.smap[self.position[row, 0]]
             irow = 1 + 4 * row
             lines[irow + 0] = ' /     \ '
             lines[irow + 1] = f'/   {color}   \\'
@@ -127,7 +132,7 @@ class HexDriver:
             for idx in range(2 * col + 4 * size + 1, total_lines):
                 lines[idx] += '       '
             for row in range(size):
-                color = smap[self.position[row, col]]
+                color = self.smap[self.position[row, col]]
                 irow = 1 + 2 * col + 4 * row
                 lines[irow + 0] += '     \ '
                 lines[irow + 1] += f'  {color}   \\'
@@ -156,9 +161,17 @@ class HexDriver:
 
 if __name__ == '__main__':
     """ """
-    size = 5
+    size = 7
+
+    def random_game():
+        board = HexDriver(size=size)
+        for _ in range(size**2):
+            board.make_random_move()
+
+    niter = 300
+    time = timeit.timeit(random_game, number=niter)
+
     board = HexDriver(size=size)
-    # while not board.game_over:
     for _ in range(size**2):
         board.make_random_move()
     print(board)
@@ -167,3 +180,5 @@ if __name__ == '__main__':
         print('Blue wins (x)')
     else:
         print('Red wins (o)')
+
+    print(f'{time / niter * 1000:.2f} ms per random {size}x{size} game')

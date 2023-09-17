@@ -16,7 +16,7 @@ const HexGame = (props) => {
     const [bluemoves, setBluemoves] = useState(true);
     // const [color, setColor] = useState('blue');
     const hexagons = GridGenerator.parallelogram(
-        -5, 6, -5, 6
+        -6, 6, -6, 6
     );
 
     const onClick = (e, h) => {
@@ -32,7 +32,7 @@ const HexGame = (props) => {
         <Box w='600px' h='600px'>
         <Heading>Hex grid</Heading>
             <HexGrid width='100%' height='100%'>
-                <Layout size={{x: 3, y: 3}}>
+                <Layout size={{x: 3, y: 3}} flat={false}>
                     {
                         hexagons.map(
                             (hex, i) => <Hexagon
