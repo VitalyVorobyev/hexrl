@@ -47,7 +47,7 @@ class HexDriver:
         self.game_over = self.is_game_over()
 
         return True
-    
+
     def is_game_over(self):
         if self.game_over:
             return self.game_over
@@ -161,24 +161,30 @@ class HexDriver:
 
 if __name__ == '__main__':
     """ """
-    size = 13
-
-    def random_game():
+    def random_game(size:int):
         board = HexDriver(size=size)
         for _ in range(size**2):
             board.make_random_move()
 
-    niter = 50
-    time = timeit.timeit(random_game, number=niter)
+    # niter = 100
+    # for size in [7, 9, 11, 13]:
+    #     time = timeit.timeit(lambda: random_game(size), number=niter)
+    #     print(f'{time / niter * 1000:.2f} ms per random {size}x{size} game')
 
-    board = HexDriver(size=size)
-    for _ in range(size**2):
-        board.make_random_move()
-    print(board)
-    assert board.game_over
-    if board.red_moves():
-        print('Blue wins (x)')
-    else:
-        print('Red wins (o)')
-
-    print(f'{time / niter * 1000:.2f} ms per random {size}x{size} game')
+    size = 13
+    xwin, owin = 0, 0
+    for iter in range(1000):
+        if iter % 100 == 0:
+            print(f'x: {xwin:3d}, o: {owin:3d}')
+        board = HexDriver(size=size)
+        for _ in range(size**2):
+            board.make_random_move()
+        # print(board)
+        assert board.game_over
+        if board.red_moves():
+            xwin += 1
+            # print('Blue wins (x)')
+        else:
+            owin += 1
+            # print('Red wins (o)')
+    print(f'x: {xwin}, o: {owin}')
