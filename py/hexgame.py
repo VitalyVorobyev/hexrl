@@ -108,7 +108,7 @@ class HexDriver:
         lines = []
         size = self.position.shape[0]
         for row in range(size):
-            lines.append(' ' * row + '  '.join(list(map(lambda i: self.smap[i], self.position[row]))))
+            lines.append(' ' * row + ' '.join(list(map(lambda i: self.smap[i], self.position[row]))))
         return '\n'.join(lines)
 
     def large_print(self) -> str:
@@ -161,14 +161,14 @@ class HexDriver:
 
 if __name__ == '__main__':
     """ """
-    size = 7
+    size = 13
 
     def random_game():
         board = HexDriver(size=size)
         for _ in range(size**2):
             board.make_random_move()
 
-    niter = 300
+    niter = 50
     time = timeit.timeit(random_game, number=niter)
 
     board = HexDriver(size=size)

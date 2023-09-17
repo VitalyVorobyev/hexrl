@@ -5,20 +5,20 @@ A pet project of a reinforcement agent for the [Hex game](https://en.wikipedia.o
 The project is at initial stage. Only random games with ASCII board implemented so far
 
 ```bash
-x  o  .  o  o  .  x  o  .  o  o  o  x
- .  x  o  x  o  o  x  .  o  x  o  x  x
-  .  o  x  o  x  x  o  x  x  o  o  x  x
-   x  x  o  x  o  o  o  .  .  o  o  o  x
-    x  .  x  o  o  o  x  x  x  x  .  o  x
-     o  x  x  o  x  x  o  x  x  x  o  o  o
-      x  o  x  o  x  o  x  o  x  x  x  o  o
-       o  x  x  x  o  o  o  o  x  o  x  o  x
-        .  o  o  x  o  x  .  x  o  o  x  o  x
-         x  o  x  x  o  o  x  o  x  x  x  x  o
-          o  o  o  x  .  x  x  x  o  x  x  x  x
-           o  o  x  o  o  x  x  x  x  x  o  .  o
-            o  o  o  o  .  o  x  x  o  x  o  o  .
-Blue wins (x)
+x x o x x . x o o x x x o   
+ o x . o x x o x o x x x .  
+  o . x x x o o o o x x o o 
+   o . x o . x x x o x . x o
+    x o o o x o . o o x . o o
+     o . x x x o o o o x x x .
+      o . x o x o x . o x x o x
+       . x x o o o o x o o . x x
+        . o o o o o . o . o o o o
+         o . . x x x o o x . x x x
+          x x o o . o o o x x x . o
+           . . x x o o x o . x x o .
+            x x o . x x o x x x o o .
+Red wins (o)
 
 81.16 ms per random 13x13 game
 44.69 ms per random 11x11 game
