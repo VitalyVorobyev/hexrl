@@ -1,4 +1,4 @@
-""" """
+""" Hex game driver """
 
 import numpy as np
 import hexpex
@@ -159,18 +159,20 @@ class HexDriver:
 #                \       /
 #                 \_____/
 
-if __name__ == '__main__':
-    """ """
-    def random_game(size:int):
-        board = HexDriver(size=size)
-        for _ in range(size**2):
-            board.make_random_move()
+def random_game(size:int):
+    """ Move by move random game """
+    board = HexDriver(size=size)
+    for _ in range(size**2):
+        board.make_random_move()
 
-    # niter = 100
-    # for size in [7, 9, 11, 13]:
-    #     time = timeit.timeit(lambda: random_game(size), number=niter)
-    #     print(f'{time / niter * 1000:.2f} ms per random {size}x{size} game')
+def benchmark(niter:int=100):
+    """ Random game generation performance test """
+    for size in [7, 9, 11, 13]:
+        time = timeit.timeit(lambda: random_game(size), number=niter)
+        print(f'{time / niter * 1000:.2f} ms per random {size}x{size} game')
 
+def main():
+    """ Test program """
     size = 13
     xwin, owin = 0, 0
     for iter in range(1000):
@@ -179,12 +181,12 @@ if __name__ == '__main__':
         board = HexDriver(size=size)
         for _ in range(size**2):
             board.make_random_move()
-        # print(board)
         assert board.game_over
         if board.red_moves():
             xwin += 1
-            # print('Blue wins (x)')
         else:
             owin += 1
-            # print('Red wins (o)')
     print(f'x: {xwin}, o: {owin}')
+
+if __name__ == '__main__':
+    main()
