@@ -43,13 +43,15 @@ class DQN(nn.Module):
         super().__init__()
         self.layer1 = nn.Linear(n_observations, 128)
         self.layer2 = nn.Linear(128, 128)
-        self.layer3 = nn.Linear(128, n_actions)
-    
+        self.layer3 = nn.Linear(128, 128)
+        self.layer4 = nn.Linear(128, n_actions)
+
     def forward(self, x:np.ndarray) -> np.ndarray:
         """ Forward pass """
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
-        return self.layer3(x)
+        x = F.relu(self.layer3(x))
+        return self.layer4(x)
 
 
 class Trainer:
@@ -101,9 +103,8 @@ class Trainer:
             return torch.tensor([[self.env.action_space.sample()]],
                                 device=self.device, dtype=torch.long)
 
-    def optimize(self):
+    def optimize(self, optimizer):
         """ Run train step """
-        optimizer = optim.AdamW(self.policy_net.parameters(), lr=self.lr, amsgrad=True)
         if len(self.memory) < self.batch_size:
             return
 
@@ -151,6 +152,7 @@ class Trainer:
 
     def run(self, num_episodes:int):
         """ Run training loop """
+        optimizer = optim.AdamW(self.policy_net.parameters(), lr=self.lr, amsgrad=True)
         for i_episode in range(num_episodes):
             print(f'episode {i_episode:5d}/{num_episodes}')
             state, info = self.env.reset()
@@ -167,7 +169,7 @@ class Trainer:
                 self.memory.push(state, action, next_state, reward)
                 state = next_state
 
-                self.optimize()
+                self.optimize(optimizer)
 
                 target_net_state_dict = self.target_net.state_dict()
                 policy_net_state_dict = self.policy_net.state_dict()
@@ -180,6 +182,7 @@ class Trainer:
                     self.episode_durations.append(t + 1)
                     self.plot_durations()
                     break
+                
         print('Complete')
         self.plot_durations(True)
         plt.ioff()
@@ -195,21 +198,15 @@ class Trainer:
         plt.xlabel('Episode')
         plt.ylabel('Duration')
         plt.plot(durations_t.numpy())
-
-        # if len(durations_t) >= 100:
-        #     means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
-        #     means = torch.cat((torch.zeros(99)), means)
-        #     plt.plot(means.numpy())
-
         plt.pause(0.001)
 
 def main():
     """ Test program """
-    env = gym.make('CartPole-v1')
+    env = gym.make('CartPole-v1', render_mode="human")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     trainer = Trainer(env, device, 10000, 137)
 
-    nruns = 5000
+    nruns = 999
     trainer.run(nruns)
 
     model = trainer.target_net
@@ -219,6 +216,7 @@ def main():
         print(param_tensor, "\t", model.state_dict()[param_tensor].size())
 
     torch.save(model.state_dict(), f'./data/CartPole_model{nruns}')
+    plt.show()
 
 if __name__ == '__main__':
     main()
