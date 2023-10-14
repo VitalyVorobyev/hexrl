@@ -2,13 +2,13 @@
     https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 """
 
+import sys
 import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import namedtuple, deque
 from itertools import count
 import random
-from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -185,7 +185,7 @@ class Trainer:
                 
         print('Complete')
         self.plot_durations(True)
-        plt.ioff()
+        # plt.ioff()
 
     def plot_durations(self, show_result:bool=False):
         plt.figure(1)
@@ -206,7 +206,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     trainer = Trainer(env, device, 10000, 137)
 
-    nruns = 999
+    nruns = int(sys.argv[1]) if len(sys.argv) > 1 else 1000
     trainer.run(nruns)
 
     model = trainer.target_net

@@ -16,10 +16,9 @@ class HexDriver:
         self.position = np.zeros((size, size), dtype=int)
         self.rng = np.random.default_rng()
 
-    def make_random_move(self):
+    def make_random_move(self) -> tuple[int, int]:
         """ """
-        if self.game_over:
-            return None
+        assert not self.game_over
         if self.position.size > self.moves + 1:
             move = self.rng.integers(self.position.size - self.moves - 1, size=1).item()
         else:
@@ -68,21 +67,21 @@ class HexDriver:
         hsize = self.position.shape[0] // 2
         col, row = (q.q, q.r) if r is None else (q, r)
         return self.position[row + hsize, col + hsize]
-    
+
     def blue_wins(self) -> bool:
         """ True if a winning position for blue """
         hsize = self.position.shape[0] // 2
         sources = [hexpex.Axial(-hsize, r) for r in range(-hsize, hsize + 1) if self.cell_color(-hsize, r) == self.blue]
         targets = [hexpex.Axial( hsize, r) for r in range(-hsize, hsize + 1) if self.cell_color( hsize, r) == self.blue]
         return self.dfs(sources, targets)
-    
+
     def red_wins(self) -> bool:
         """ """
         hsize = self.position.shape[0] // 2
         sources = [hexpex.Axial(q, -hsize) for q in range(-hsize, hsize + 1) if self.cell_color(q, -hsize) == self.red]
         targets = [hexpex.Axial(q,  hsize) for q in range(-hsize, hsize + 1) if self.cell_color(q,  hsize) == self.red]
         return self.dfs(sources, targets)
-    
+
     def same_color(self, cell1:hexpex.Axial, cell2:hexpex.Axial) -> bool:
         return self.cell_color(cell1) == self.cell_color(cell2)
 
