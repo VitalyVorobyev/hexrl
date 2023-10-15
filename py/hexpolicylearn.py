@@ -65,7 +65,8 @@ class Trainer:
         self.device = device
         self.memory = ReplayMemory(cache_size, self.rng)
 
-        self.fig, self.ax, self.line, self.hist = None, None, None, None
+        self.fig, self.ax = None, None
+        self.outcome_line, self.winrate_line = None, None,
 
         self.batch_size = 128
         self.gamma = 0.99
@@ -81,10 +82,11 @@ class Trainer:
 
         self.steps_done = 0
         self.game_outcome = []
+        self.game_winrate = []
 
     def init_train_plot(self, num_episodes:int) -> None:
         """ Create objects for train plot """
-        self.fig, self.ax = plt.subplots(ncols=2, figsize=(11, 5))
+        self.fig, self.ax = plt.subplots(ncols=2, figsize=(11, 5), sharex=True)
         self.ax[0].minorticks_on()
         self.ax[0].grid(which='minor', linestyle=':')
         self.ax[0].grid(which='major')
@@ -95,21 +97,24 @@ class Trainer:
         self.ax[1].minorticks_on()
         self.ax[1].grid(which='minor', linestyle=':')
         self.ax[1].grid(which='major')
+        self.ax[1].set_xlabel('Episode')
         self.ax[1].set_ylabel('Victory rate')
         self.ax[1].set_ylim((0, 1.05))
-        self.ax[1].set_xlim((-0.1, 0.1))
 
         x = np.zeros(num_episodes)
-        self.line, = self.ax[0].plot(x, 'o', markersize=1)
-        self.hist, = self.ax[1].plot([0.5], 'o', markersize=7)
+        self.outcome_line, = self.ax[0].plot(x, 'o', markersize=2)
+        self.winrate_line, = self.ax[1].plot(x, 'o', markersize=2)
         self.fig.tight_layout()
     
     def update_train_plot(self, num_episodes:int):
         """ Update traning plot """
-        newy = np.zeros(num_episodes)
+        newy = 10 * np.ones(num_episodes)
         newy[:len(self.game_outcome)] = self.game_outcome
-        self.line.set_ydata(newy)
-        self.hist.set_ydata([np.mean(np.array(self.game_outcome[-100:]) > 0)])
+        self.outcome_line.set_ydata(newy)
+
+        newy = 10 * np.ones(num_episodes)
+        newy[:len(self.game_winrate)] = self.game_winrate
+        self.winrate_line.set_ydata(newy)
 
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
@@ -199,6 +204,7 @@ class Trainer:
 
                 if is_gameover:
                     self.game_outcome.append(reward.item())
+                    self.game_winrate.append(np.mean(np.array(self.game_outcome[-100:]) > 0))
                     self.update_train_plot(num_episodes)
                     break
 
