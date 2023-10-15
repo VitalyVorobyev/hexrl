@@ -63,7 +63,7 @@ class Trainer:
         self.device = device
         self.memory = ReplayMemory(cache_size, self.rng)
 
-        self.fig, self.ax, self.line = self.init_train_plot()
+        self.fig, self.ax, self.line, self.hist = None, None, None, None
 
         self.batch_size = 128
         self.gamma = 0.99
@@ -80,26 +80,38 @@ class Trainer:
         self.steps_done = 0
         self.game_outcome = []
 
-    def init_train_plot(self) -> tuple:
+    def init_train_plot(self, num_episodes:int) -> None:
         """ Create objects for train plot """
-        fig, ax = plt.subplots(ncols=2, figsize=(12, 7))
-        ax[0].minorticks_on()
-        ax[0].grid(which='minor', linestyle=':')
-        ax[0].grid(which='major')
-        ax[0].set_xlabel('Episode')
-        ax[0].set_ylabel('Game outcome')
+        self.fig, self.ax = plt.subplots(ncols=2, figsize=(11, 5))
+        self.ax[0].minorticks_on()
+        self.ax[0].grid(which='minor', linestyle=':')
+        self.ax[0].grid(which='major')
+        self.ax[0].set_xlabel('Episode')
+        self.ax[0].set_ylabel('Game outcome')
+        self.ax[0].set_ylim((-1.2, 1.2))
 
-        dummy_data = np.zeros(1000)
-        line, = ax[0].plot(dummy_data, 'o')
-        fig.tight_layout()
+        self.ax[1].minorticks_on()
+        self.ax[1].grid(which='minor', linestyle=':')
+        self.ax[1].grid(which='major')
+        self.ax[1].set_ylabel('Victory rate')
+        self.ax[1].set_ylim((0, 1.05))
+        self.ax[1].set_xlim((-0.1, 0.1))
 
-        return fig, ax, line
+        x = np.zeros(num_episodes)
+        self.line, = self.ax[0].plot(x, 'o', markersize=1)
+        self.hist, = self.ax[1].plot([0.5], 'o', markersize=7)
+        self.fig.tight_layout()
     
-    def update_train_plot(self):
+    def update_train_plot(self, num_episodes:int):
         """ Update traning plot """
-        self.line.set_data(np.arange(len(self.game_outcome)), self.game_outcome)
+        newy = np.zeros(num_episodes)
+        newy[:len(self.game_outcome)] = self.game_outcome
+        self.line.set_ydata(newy)
+        self.hist.set_ydata([np.mean(np.array(self.game_outcome[-100:]) > 0)])
+
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
+        plt.pause(0.001)
 
     def eps_threshold(self) -> float:
         """ Random action probability """
@@ -110,15 +122,14 @@ class Trainer:
         """ Action policy """
         self.steps_done += 1
         if self.rng.random() < self.eps_threshold():
-            print('Random move')
             return torch.tensor([[self.env.sample()]], device=self.device, dtype=torch.long)
 
         available_actions = self.env.available_actions()
-        print(f'available_actions\n{available_actions}')
         with torch.no_grad():
             r_actions = self.policy_net(state)[0, :]
             action_idx = np.argmax([r_actions[action] for action in available_actions])
-            return available_actions[action_idx]
+            action = available_actions[action_idx]
+            return torch.tensor([[action]], device=self.device, dtype=torch.long)
 
     def optimize(self, optimizer):
         """ Run train step """
@@ -162,6 +173,7 @@ class Trainer:
 
     def run(self, num_episodes:int):
         """ Run training loop """
+        self.init_train_plot(num_episodes)
         optimizer = optim.AdamW(self.policy_net.parameters(), lr=self.lr, amsgrad=True)
         for i_episode in range(num_episodes):
             print(f'episode {i_episode:5d}/{num_episodes}')
@@ -171,7 +183,6 @@ class Trainer:
                                  dtype=torch.float32, device=self.device).unsqueeze(0)
             for t in count():
                 action = self.select_action(state)
-                # print(action.item())
                 observation, reward, is_gameover = self.env.step(action.item())
                 reward = torch.tensor([reward], device=self.device)
 
@@ -185,17 +196,21 @@ class Trainer:
                 self.update_target_state()
 
                 if is_gameover:
-                    self.game_outcome.append(reward)
-                    self.update_train_plot()
+                    self.game_outcome.append(reward.item())
+                    self.update_train_plot(num_episodes)
                     break
 
         print('Complete')
+        plt.ioff()
 
 def main():
     """ Test program """
     size = int(sys.argv[1]) if len(sys.argv) > 1 else 7
     nruns = int(sys.argv[2]) if len(sys.argv) > 2 else 1000
     print(f'Run {nruns} games of board size {size}x{size}')
+
+    plt.ion()
+    assert plt.isinteractive()
 
     env = HexEnv(size)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

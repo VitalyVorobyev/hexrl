@@ -66,8 +66,6 @@ class HexDriver:
         self.moves += 1
         self.game_over = self.is_game_over()
 
-        print(self)
-
         return True
 
     def is_game_over(self):
