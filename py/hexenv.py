@@ -16,10 +16,13 @@ class HexEnv:
 
     def get_respose(self) -> tuple[np.ndarray, int, bool]:
         """ Current position, reward, and end game flag """
+        reward, is_endgame = 0, False
         if self.board.is_game_over():
-            return self.board.position.ravel(), 1, True
-        self.board.make_random_move()
-        reward, is_endgame = ((-1, True) if self.board.is_game_over() else (0, False))
+            reward, is_endgame = 1, True
+        else:
+            self.board.make_random_move()
+            if self.board.is_game_over():
+                reward, is_endgame = -1, True
         return self.board.position.ravel(), reward, is_endgame
 
     def step(self, action:int) -> tuple[np.ndarray, int, bool]:

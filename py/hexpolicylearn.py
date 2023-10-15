@@ -39,14 +39,16 @@ class HexPolicyNet(nn.Module):
     def __init__(self, board_size:int) -> None:
         super().__init__()
         self.layer1 = nn.Linear(board_size**2, 128)
-        self.layer2 = nn.Linear(128, 128)
-        self.layer3 = nn.Linear(128, 128)
-        self.layer4 = nn.Linear(128, board_size**2)
+        self.layer2 = nn.Linear(128, 256)
+        self.layer3 = nn.Linear(256, 128)
+        self.layer4 = nn.Linear(128, 128)
+        self.layer5 = nn.Linear(128, board_size**2)
         self.layers = [
             self.layer1,
             self.layer2,
             self.layer3,
-            self.layer4
+            self.layer4,
+            self.layer5
         ]
 
     def forward(self, x:np.ndarray) -> np.ndarray:
