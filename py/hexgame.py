@@ -4,6 +4,8 @@ import numpy as np
 import hexpex
 import timeit
 
+from unionfind import Unionfind
+
 class HexDriver:
     """ Hex game mechanics """
     def __init__(self, size:int=11):
@@ -16,16 +18,26 @@ class HexDriver:
         self.position = np.zeros((size, size), dtype=int)
         self.rng = np.random.default_rng()
 
+        self.red_top_idx  = size**2
+        self.red_bot_idx  = size**2 + 1
+        self.blue_top_idx = size**2 + 2
+        self.blue_bot_idx = size**2 + 3
+
+        self.size = size
+        self.hsize = size // 2
+
+        self.use_uf = True
+        self.uf = Unionfind(size**2 + 4)
+
     def next_positions(self) -> np.ndarray:
         """ Generate all possible next positions """
         nmoves = self.position.size - self.moves
-        rowsize = self.position.shape[0]
         positions = np.empty((nmoves, self.position.size), dtype=int)
         positions[:] = self.position.ravel()
         rows, cols = np.where(self.position == 0)
         value = self.red if self.red_moves() else self.blue
         for pos, row, col in zip(positions, rows, cols):
-            pos[rowsize * row + col] = value
+            pos[self.size * row + col] = value
         return positions
 
     def available_moves_mask(self) -> np.ndarray:
@@ -40,9 +52,8 @@ class HexDriver:
         else:
             move = 0  # last move
         rows, cols = np.where(self.position == 0)
-        hsize = self.position.shape[0] // 2
-        q = cols[move] - hsize
-        r = rows[move] - hsize
+        q = cols[move] - self.hsize
+        r = rows[move] - self.hsize
         return q, r
 
     def make_random_move(self) -> tuple[int, int]:
@@ -59,9 +70,9 @@ class HexDriver:
         if not self.is_in_board(q, r) or self.cell_color(q, r) != 0:
             print(f'Bad move: {q:+d} {r:+d} {self.is_in_board(q, r)} {self.cell_color(q, r)}')
             return False
-        hsize = self.position.shape[0] // 2
-        col, row = q + hsize, r + hsize
+        col, row = q + self.hsize, r + self.hsize
         self.position[row, col] = self.red if self.red_moves() else self.blue
+        self.update_uf(hexpex.Axial(q, r))
 
         self.moves += 1
         self.game_over = self.is_game_over()
@@ -70,9 +81,7 @@ class HexDriver:
 
     def is_game_over(self):
         """ True if game is finished """
-        if self.game_over:
-            return self.game_over
-        return (self.blue_wins() if self.red_moves() else self.red_wins())
+        return self.game_over or (self.blue_wins() if self.red_moves() else self.red_wins())
 
     def red_moves(self) -> bool:
         """ True if red makes the next move """
@@ -80,11 +89,35 @@ class HexDriver:
 
     def is_in_board(self, q:int|hexpex.Axial, r:int|None=None) -> bool:
         """ Checks that hex board position within the current board """
-        size = self.position.shape[0]
-        hsize = self.position.shape[0] // 2
-        col, row = (q.q, q.r) if r is None else (q, r)
-        col, row = col + hsize, row + hsize
-        return col >= 0 and col < size and row >= 0 and row < size
+        q, r = (q.q, q.r) if r is None else (q, r)
+        if True:
+            return q >= -self.hsize and q <= self.hsize and\
+                   r >= -self.hsize and r <= self.hsize
+        else:
+            col, row = q + self.hsize, r + self.hsize
+            return col >= 0 and col < self.size and row >= 0 and row < self.size
+    
+    def cell_idx(self, cell:hexpex.Axial) -> int:
+        """ cell index """
+        return (cell.r + self.hsize) * self.size + cell.q + self.hsize
+
+    def update_uf(self, cell:hexpex.Axial):
+        """ Update union-find object """
+        cellidx = self.cell_idx(cell)
+        if self.red_moves():
+            if cell.r == self.hsize:
+                self.uf.union(cellidx, self.red_top_idx)
+            elif cell.r == -self.hsize:
+                self.uf.union(cellidx, self.red_bot_idx)
+        else:
+            if cell.q == self.hsize:
+                self.uf.union(cellidx, self.blue_top_idx)
+            elif cell.q == -self.hsize:
+                self.uf.union(cellidx, self.blue_bot_idx)
+
+        for neib in cell.ring(1):
+            if self.is_in_board(neib) and self.same_color(cell, neib):
+                self.uf.union(cellidx, self.cell_idx(neib))
 
     def cell_color(self, q:int|hexpex.Axial, r:int|None=None) -> int:
         hsize = self.position.shape[0] // 2
@@ -93,17 +126,27 @@ class HexDriver:
 
     def blue_wins(self) -> bool:
         """ True if a winning position for blue """
-        hsize = self.position.shape[0] // 2
-        sources = [hexpex.Axial(-hsize, r) for r in range(-hsize, hsize + 1) if self.cell_color(-hsize, r) == self.blue]
-        targets = [hexpex.Axial( hsize, r) for r in range(-hsize, hsize + 1) if self.cell_color( hsize, r) == self.blue]
-        return self.dfs(sources, targets)
+        if self.use_uf:
+            return self.uf.find(self.blue_top_idx) == self.uf.find(self.blue_bot_idx)
+        else:
+            hsize = self.position.shape[0] // 2
+            sources = [hexpex.Axial(-hsize, r) for r in range(-hsize, hsize + 1)
+                       if self.cell_color(-hsize, r) == self.blue]
+            targets = [hexpex.Axial( hsize, r) for r in range(-hsize, hsize + 1)
+                       if self.cell_color( hsize, r) == self.blue]
+            return self.dfs(sources, targets)
 
     def red_wins(self) -> bool:
-        """ """
-        hsize = self.position.shape[0] // 2
-        sources = [hexpex.Axial(q, -hsize) for q in range(-hsize, hsize + 1) if self.cell_color(q, -hsize) == self.red]
-        targets = [hexpex.Axial(q,  hsize) for q in range(-hsize, hsize + 1) if self.cell_color(q,  hsize) == self.red]
-        return self.dfs(sources, targets)
+        """ True if a winning position for red """
+        if self.use_uf:
+            return self.uf.find(self.red_top_idx) == self.uf.find(self.red_bot_idx)
+        else:
+            hsize = self.position.shape[0] // 2
+            sources = [hexpex.Axial(q, -hsize) for q in range(-hsize, hsize + 1)
+                       if self.cell_color(q, -hsize) == self.red]
+            targets = [hexpex.Axial(q,  hsize) for q in range(-hsize, hsize + 1)
+                       if self.cell_color(q,  hsize) == self.red]
+            return self.dfs(sources, targets)
 
     def same_color(self, cell1:hexpex.Axial, cell2:hexpex.Axial) -> bool:
         return self.cell_color(cell1) == self.cell_color(cell2)
@@ -194,31 +237,46 @@ class HexDriver:
 def random_game(size:int):
     """ Move by move random game """
     board = HexDriver(size=size)
-    for _ in range(size**2):
+    while not board.game_over:
         board.make_random_move()
 
 def benchmark(niter:int=100):
-    """ Random game generation performance test """
+    """ Random game generation performance test
+    DFS:
+         8.72 ms per random 7x7 game
+        21.23 ms per random 9x9 game
+        44.33 ms per random 11x11 game
+        79.40 ms per random 13x13 game
+    Union-find:
+         4.27 ms per random 7x7 game
+         7.72 ms per random 9x9 game
+        10.88 ms per random 11x11 game
+        15.39 ms per random 13x13 game
+    """
     for size in [7, 9, 11, 13]:
         time = timeit.timeit(lambda: random_game(size), number=niter)
         print(f'{time / niter * 1000:.2f} ms per random {size}x{size} game')
 
-def main():
-    """ Test program """
+def winrate():
+    """ Win rate in random games """
     size = 13
     xwin, owin = 0, 0
     for iter in range(1000):
         if iter % 100 == 0:
             print(f'x: {xwin:3d}, o: {owin:3d}')
         board = HexDriver(size=size)
-        for _ in range(size**2):
+        while not board.game_over:
             board.make_random_move()
-        assert board.game_over
         if board.red_moves():
             xwin += 1
         else:
             owin += 1
     print(f'x: {xwin}, o: {owin}')
+
+def main():
+    """ Test function """
+    # benchmark()
+    winrate()
 
 if __name__ == '__main__':
     main()
