@@ -16,8 +16,24 @@ class HexDriver:
         self.position = np.zeros((size, size), dtype=int)
         self.rng = np.random.default_rng()
 
-    def make_random_move(self) -> tuple[int, int]:
-        """ """
+    def next_positions(self) -> np.ndarray:
+        """ Generate all possible next positions """
+        nmoves = self.position.size - self.moves
+        rowsize = self.position.shape[0]
+        positions = np.empty((nmoves, self.position.size), dtype=int)
+        positions[:] = self.position.ravel()
+        rows, cols = np.where(self.position == 0)
+        value = self.red if self.red_moves() else self.blue
+        for pos, row, col in zip(positions, rows, cols):
+            pos[rowsize * row + col] = value
+        return positions
+
+    def available_moves_mask(self) -> np.ndarray:
+        """ Get mask of the currently available moves """
+        return self.position == 0
+
+    def suggest_random_move(self) -> tuple[int, int]:
+        """ Returns a valid move, doesn't change state of the game """
         assert not self.game_over
         if self.position.size > self.moves + 1:
             move = self.rng.integers(self.position.size - self.moves - 1, size=1).item()
@@ -27,11 +43,16 @@ class HexDriver:
         hsize = self.position.shape[0] // 2
         q = cols[move] - hsize
         r = rows[move] - hsize
+        return q, r
+
+    def make_random_move(self) -> tuple[int, int]:
+        """ Generate random move and apply it """
+        q, r = self.suggest_random_move()
         self.make_move(q, r)
         return q, r
 
     def make_move(self, q:int, r:int) -> bool:
-        """ """
+        """ Change game state given the next move """
         if self.game_over:
             print('No moves: game over')
             return False
@@ -45,9 +66,12 @@ class HexDriver:
         self.moves += 1
         self.game_over = self.is_game_over()
 
+        print(self)
+
         return True
 
     def is_game_over(self):
+        """ True if game is finished """
         if self.game_over:
             return self.game_over
         return (self.blue_wins() if self.red_moves() else self.red_wins())
@@ -57,6 +81,7 @@ class HexDriver:
         return self.moves % 2
 
     def is_in_board(self, q:int|hexpex.Axial, r:int|None=None) -> bool:
+        """ Checks that hex board position within the current board """
         size = self.position.shape[0]
         hsize = self.position.shape[0] // 2
         col, row = (q.q, q.r) if r is None else (q, r)
@@ -108,6 +133,16 @@ class HexDriver:
         size = self.position.shape[0]
         for row in range(size):
             lines.append(' ' * row + ' '.join(list(map(lambda i: self.smap[i], self.position[row]))))
+        return '\n'.join(lines)
+
+    @staticmethod
+    def position_as_str(pos:np.ndarray) -> str:
+        """ Console image of a position """
+        smap = { key: val for key, val in zip([1, -1, 0], 'xo.') }
+        lines = []
+        size = pos.shape[0]
+        for row in range(size):
+            lines.append(' ' * row + ' '.join(list(map(lambda i: smap[i], pos[row]))))
         return '\n'.join(lines)
 
     def large_print(self) -> str:

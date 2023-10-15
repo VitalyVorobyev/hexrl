@@ -43,16 +43,18 @@ class DQN(nn.Module):
         super().__init__()
         self.layer1 = nn.Linear(n_observations, 128)
         self.layer2 = nn.Linear(128, 128)
-        self.layer3 = nn.Linear(128, 128)
-        self.layer4 = nn.Linear(128, n_actions)
+        self.layer3 = nn.Linear(128, n_actions)
+        self.layers = [
+            self.layer1,
+            self.layer2,
+            self.layer3
+        ]
 
     def forward(self, x:np.ndarray) -> np.ndarray:
         """ Forward pass """
-        x = F.relu(self.layer1(x))
-        x = F.relu(self.layer2(x))
-        x = F.relu(self.layer3(x))
-        return self.layer4(x)
-
+        for layer in self.layers[:-1]:
+            x = F.relu(layer(x))
+        return self.layers[-1](x)
 
 class Trainer:
     """ Policy trainer """
@@ -155,6 +157,8 @@ class Trainer:
         optimizer = optim.AdamW(self.policy_net.parameters(), lr=self.lr, amsgrad=True)
         for i_episode in range(num_episodes):
             print(f'episode {i_episode:5d}/{num_episodes}')
+            if i_episode % 200 == 0:
+                torch.save(self.target_net.state_dict(), f'./data/CartPole_model{i_episode}')
             state, info = self.env.reset()
             state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
             for t in count():
@@ -210,11 +214,6 @@ def main():
     trainer.run(nruns)
 
     model = trainer.target_net
-
-    print("Model's state_dict:")
-    for param_tensor in model.state_dict():
-        print(param_tensor, "\t", model.state_dict()[param_tensor].size())
-
     torch.save(model.state_dict(), f'./data/CartPole_model{nruns}')
     plt.show()
 
