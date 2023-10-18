@@ -7,3 +7,4 @@ scikit-learn
 gymnasium
 tqdm
 hexpex
+pygame

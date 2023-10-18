@@ -27,12 +27,12 @@ class ReplayMemory:
     def push(self, *args) -> None:
         """ Save a transition """
         self.memory.append(Transition(*args))
-    
+
     def sample(self, batch_size:int) -> np.ndarray:
         """ Get batch of random transitions from memory """
         return random.sample(self.memory, batch_size)
         # return self.rng.choice(self.memory, batch_size)
-    
+
     def __len__(self) -> int:
         """ Number of saved states """
         return len(self.memory)
@@ -83,7 +83,7 @@ class Trainer:
         self.policy_net = DQN(n_observations, n_actions).to(device)
         self.target_net = DQN(n_observations, n_actions).to(device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-    
+
         self.steps_done = 0
         self.episode_durations = []
 
@@ -186,12 +186,12 @@ class Trainer:
                     self.episode_durations.append(t + 1)
                     self.plot_durations()
                     break
-                
+
         print('Complete')
         self.plot_durations(True)
-        # plt.ioff()
 
     def plot_durations(self, show_result:bool=False):
+        """ Training plot """
         plt.figure(1)
         durations_t = torch.tensor(self.episode_durations, dtype=torch.float)
         if show_result:
